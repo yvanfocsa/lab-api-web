@@ -1,74 +1,203 @@
 # Lab: Web API with Node.js and Express
 
-Projet réalisé dans le cadre du cours de Technologies Web Avancées à l'ECE Paris.
+Projet réalisé dans le cadre du cours de **Technologies Web Avancées** à l'ECE Paris.
 
-## 🎯 Objectifs
-
-- Programmation côté serveur avec **Node.js**
-- Création d'un serveur Web et d'une API REST avec **Express.js**
-- Organisation modulaire du code avec `express.Router`
-- Couverture de tests automatisés avec **Mocha** et **SuperTest**
-- Compréhension et analyse comparative de **GraphQL** face à REST
+Ce dépôt implémente une API REST modulaire avec Express, une suite de 27 tests automatisés (Mocha & SuperTest), une base de données en mémoire avec support des articles, recettes et commentaires, ainsi qu'une documentation exhaustive.
 
 ---
 
-## 📁 Structure du projet
+## 📑 Sommaire
+
+1. [Architecture & Fichiers](#-architecture--fichiers)
+2. [Installation & Démarrage](#-installation--démarrage)
+3. [Documentation de l'API REST](#-documentation-de-lapi-rest)
+4. [Tests Automatisés (Partie 3 - Bonus)](#-tests-automatisés-partie-3---bonus)
+5. [Synthèse Comparative GraphQL vs REST (Partie 4)](#-synthèse-comparative-graphql-vs-rest-partie-4)
+6. [Spécifications & Guide Agent IA](#-spécifications--guide-agent-ia)
+7. [Conventions Git](#-conventions-git)
+
+---
+
+## 📁 Architecture & Fichiers
 
 ```
 serene-bose/
-├── content/
-│   └── about.json               # Contenu JSON dynamique hérité du Lab 1
+├── index.js                     # Point d'entrée principal du serveur HTTP
+├── headers/                     # Modules de routage / handlers modulaires
+│   ├── recettes.js              # Routeur Express pour les recettes et leurs commentaires
+│   ├── articles.js              # Routeur pour les articles
+│   ├── comments.js              # Routeur imbriqué pour les commentaires
+│   └── general.js               # Routes issues du Lab 1 (/hello, /about)
+├── handlers/                    # Alias miroir pour compatibilité
 ├── src/
-│   ├── app.js                   # Configuration Express, middlewares et routage
-│   ├── server.js                # Point d'entrée pour démarrer le serveur HTTP
-│   ├── db.js                    # Modèle de base de données en mémoire (articles & commentaires)
-│   └── routes/
-│       ├── general.js           # Routes migrées du Lab 1 (/hello, /about)
-│       ├── articles.js          # Routes pour /articles
-│       └── comments.js          # Sub-router pour /articles/:articleId/comments
+│   ├── app.js                   # Application Express, middlewares et enregistrement des routes
+│   ├── server.js                # Lanceur alternatif
+│   ├── db.js                    # Base de données en mémoire avec méthode db.reset()
+│   └── routes/                  # Routeurs source d'origine
+├── content/
+│   └── about.json               # Données statiques JSON migrées du Lab 1
 ├── test/
-│   └── api.test.js              # Suite de 20 tests unitaires et d'intégration
-├── .gitignore                   # Fichiers ignorés par Git
-├── package.json                 # Dépendances et scripts npm
-└── README.md                    # Documentation complète du projet
+│   └── api.test.js              # 27 tests unitaires et d'intégration (Mocha + SuperTest)
+├── SPECS.md                     # Cahier des charges et spécifications techniques détaillées
+├── AGENTS.md                    # Directives d'exploitation pour assistants et agents IA
+├── package.json                 # Métadonnées, dépendances et scripts npm
+├── .gitignore                   # Exclusion de node_modules, logs, etc.
+└── README.md                    # Guide général du projet
 ```
 
 ---
 
-## 🚀 Installation et Démarrage
+## 🚀 Installation & Démarrage
 
 ### Prérequis
-
 - **Node.js** (v18+)
 - **npm** (v9+)
 
-### Installation des dépendances
-
+### 1. Installation des dépendances
 ```bash
 npm install
 ```
 
-### Lancement du serveur
-
+### 2. Démarrage du serveur
 ```bash
 npm start
 ```
+Le serveur démarrera sur le port `8080` (ou sur la valeur de la variable `PORT`). En cas de conflit de port, il basculera automatiquement sur le port de repli `3000`.
 
-Par défaut, le serveur écoute sur le port `8080` (ou sur la variable d'environnement `PORT` si définie, avec bascule automatique sur `3000` si le port est occupé).
+---
+
+## 📡 Documentation de l'API REST
+
+### 1. Routes Générales (Réfracteur Lab 1)
+
+| Méthode | Route | Description | Exemple |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/` | Vue d'ensemble et liste des routes | `curl http://localhost:8080/` |
+| `GET` | `/hello` | Salutation anonyme ou via query `?name=...` | `curl "http://localhost:8080/hello?name=Alice"` |
+| `GET` | `/hello/:name` | Salutation avec paramètre de route | `curl http://localhost:8080/hello/Bob` |
+| `GET` | `/about` | Lecture dynamique de `content/about.json` | `curl http://localhost:8080/about` |
+
+---
+
+### 2. Gestion des Articles (`/articles`)
+
+#### `GET /articles`
+Renvoie la liste complète des articles.
+
+```bash
+curl -X GET http://localhost:8080/articles
+```
+
+#### `POST /articles`
+Crée un nouvel article (génération automatique d'UUID v4 et date).
+
+```bash
+curl -X POST http://localhost:8080/articles \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Découvrir Express",
+    "content": "Express permet de structurer efficacement une API REST.",
+    "author": "Yvan Focsa"
+  }'
+```
+
+#### `GET /articles/:articleId`
+Récupère un article précis par son ID (`404` si introuvable).
+
+```bash
+curl -X GET http://localhost:8080/articles/6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b
+```
+
+#### `GET /articles/:articleId/comments`
+Récupère les commentaires d'un article.
+
+#### `POST /articles/:articleId/comments`
+Ajoute un commentaire à un article (`id` UUID et `timestamp` UNIX générés).
+
+```bash
+curl -X POST http://localhost:8080/articles/6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b/comments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Article très pertinent !",
+    "author": "Alice"
+  }'
+```
+
+#### `GET /articles/:articleId/comments/:commentId`
+Récupère un commentaire spécifique d'un article.
+
+---
+
+### 3. Gestion des Recettes (`headers/recettes.js` monté sur `/recettes`)
+
+#### `GET /recettes`
+Liste l'ensemble des recettes culinaires.
+
+```bash
+curl -X GET http://localhost:8080/recettes
+```
+
+**Exemple de réponse :**
+```json
+[
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "title": "Tarte aux pommes rustique",
+    "content": "Délicieuse tarte aux pommes croustillante avec compote maison et cannelle.",
+    "ingredients": ["Pommes Golden", "Pâte feuilletée", "Sucre de canne", "Beurre doux", "Cannelle"],
+    "date": "16/09/2026",
+    "author": "Chef Yvan"
+  }
+]
+```
+
+#### `POST /recettes`
+Ajoute une nouvelle recette avec liste d'ingrédients.
+
+```bash
+curl -X POST http://localhost:8080/recettes \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Crêpes maison",
+    "content": "Mélanger la farine, les oeufs et le lait progressivement.",
+    "ingredients": ["Farine", "Lait", "Oeufs", "Beurre fondu"],
+    "author": "Yvan Focsa"
+  }'
+```
+
+#### `GET /recettes/:recetteId`
+Récupère une recette par son identifiant unique.
+
+#### `GET /recettes/:recetteId/comments`
+Liste les commentaires associés à une recette.
+
+#### `POST /recettes/:recetteId/comments`
+Ajoute un avis ou commentaire sur une recette.
+
+```bash
+curl -X POST http://localhost:8080/recettes/a1b2c3d4-e5f6-7890-abcd-ef1234567890/comments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Recette facile et délicieuse !",
+    "author": "Gourmand92"
+  }'
+```
+
+#### `GET /recettes/:recetteId/comments/:commentId`
+Récupère un commentaire spécifique d'une recette.
 
 ---
 
 ## 🧪 Tests Automatisés (Partie 3 - Bonus)
 
-Le projet intègre une suite de tests complète avec **Mocha** et **SuperTest** couvrant 100% des routes et des cas limites (succès, erreurs 400 et 404, isolation de l'état).
+Le projet utilise **Mocha** combiné à **SuperTest** pour tester tous les endpoints HTTP de manière isolée sans démarrer manuellement de port réseau.
 
-Pour lancer les tests :
-
+Pour exécuter les tests :
 ```bash
 npm test
 ```
 
-Résultat d'exécution :
+### Résultats d'exécution :
 ```text
   Web API with Express Tests
     Part 1: Refactored routes from previous lab
@@ -93,176 +222,62 @@ Résultat d'exécution :
       ✔ POST /articles/:articleId/comments should return 400 if required fields are missing
       ✔ GET /articles/:articleId/comments/:commentId should return the specific comment
       ✔ GET /articles/:articleId/comments/:commentId should return 404 for non-existent comment
-      ✔ GET /articles/:articleId/comments/:commentId should return 404 for non-existent article
+    Headers / Recettes API (/recettes)
+      ✔ GET /recettes should return the list of recipes
+      ✔ GET /recettes/:recetteId should return a recipe by ID
+      ✔ GET /recettes/:recetteId should return 404 if recipe not found
+      ✔ POST /recettes should create a recipe with UUID
+      ✔ POST /recettes should return 400 when missing fields
+      ✔ GET /recettes/:recetteId/comments should return comments for that recipe
+      ✔ POST /recettes/:recetteId/comments should create comment for recipe
+      ✔ GET /recettes/:recetteId/comments/:commentId should return specific comment
 
-  20 passing (50ms)
+  27 passing (60ms)
 ```
 
 ---
 
-## 📡 Documentation de l'API REST
+## 💡 Synthèse Comparative GraphQL vs REST (Partie 4)
 
-### 1. Routes Générales (Partie 1 - Réfracteur Lab 1)
+Dans le cadre du cours, cette section analyse les bénéfices de **GraphQL** face à l'approche **REST** :
 
-#### `GET /`
-Présentation de l'API et cartographie des endpoints.
+1. **Suppression de l'Over-fetching :**  
+   En REST, la route `GET /articles/:id` renvoie toujours la totalité des champs de l'article (id, titre, contenu, date, auteur). Avec GraphQL, le client formule une requête déclarant exclusivement les champs utiles (ex: uniquement `title`), réduisant la consommation de bande passante et le parsing mobile.
 
-#### `GET /hello`
-- Sans paramètre : retourne `Hello anonymous`
-- Avec paramètre de requête `?name=Alice` : retourne `Hello Alice`
-- Avec nom étudiant `?name=Yvan` : retourne la présentation personnalisée.
+2. **Suppression de l'Under-fetching (Problème N+1) :**  
+   Pour afficher une page contenant une recette (ou un article) et tous ses commentaires associés en REST, le client doit envoyer au minimum 2 requêtes HTTP : `GET /recettes/:id` puis `GET /recettes/:id/comments`. En GraphQL, une seule requête imbriquée résout l'ensemble des dépendances en un unique aller-retour réseau :
+   ```graphql
+   query {
+     recette(id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890") {
+       title
+       ingredients
+       comments {
+         author
+         content
+       }
+     }
+   }
+   ```
 
-#### `GET /hello/:name`
-Support des paramètres d'URL (ex: `/hello/Alice`).
+3. **Point d'accès unique :**  
+   REST multiplie les endpoints et les verbes HTTP (`GET`, `POST`, `PUT`, `DELETE`). GraphQL concentre toutes les opérations sur une route unique (`POST /graphql`).
 
-#### `GET /about`
-Retourne le contenu JSON statique issu de `content/about.json`.
-
----
-
-### 2. Gestion des Articles (`/articles`)
-
-#### `GET /articles`
-Retourne la liste de tous les articles.
-
-```bash
-curl -X GET http://localhost:8080/articles
-```
-
-**Réponse (`200 OK`) :**
-```json
-[
-  {
-    "id": "6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b",
-    "title": "My article",
-    "content": "Content of the article.",
-    "date": "04/10/2022",
-    "author": "Liz Gringer"
-  }
-]
-```
-
-#### `POST /articles`
-Crée un nouvel article. L'identifiant UUID et la date sont générés automatiquement si non fournis.
-
-```bash
-curl -X POST http://localhost:8080/articles \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Introduction à Express",
-    "content": "Express facilite la création d APIs REST sous Node.js.",
-    "author": "Yvan Focsa"
-  }'
-```
-
-**Réponse (`201 Created`) :**
-```json
-{
-  "id": "a90f1110-6c92-48a0-9eb9-b8832a8292c3",
-  "title": "Introduction à Express",
-  "content": "Express facilite la création d APIs REST sous Node.js.",
-  "date": "16/09/2026",
-  "author": "Yvan Focsa"
-}
-```
-
-#### `GET /articles/:articleId`
-Récupère un article via son identifiant unique.
-
-```bash
-curl -X GET http://localhost:8080/articles/6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b
-```
+4. **Schéma fortement typé et contrat d'interface :**  
+   GraphQL définit formellement chaque type, champ et relation. Le schéma sert de source de vérité unique, permettant la validation automatique, l'auto-complétion dans les IDEs et une collaboration fluide entre équipes front et back.
 
 ---
 
-### 3. Gestion des Commentaires (`/articles/:articleId/comments`)
+## 📄 Spécifications & Guide Agent IA
 
-#### `GET /articles/:articleId/comments`
-Récupère tous les commentaires associés à l'article spécifié.
-
-```bash
-curl -X GET http://localhost:8080/articles/6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b/comments
-```
-
-**Réponse (`200 OK`) :**
-```json
-[
-  {
-    "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
-    "timestamp": 1664835049,
-    "content": "Content of the comment.",
-    "articleId": "6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b",
-    "author": "Bob McLaren"
-  }
-]
-```
-
-#### `POST /articles/:articleId/comments`
-Ajoute un nouveau commentaire sur un article. L'UUID et le timestamp UNIX (`Date.now()`) sont générés automatiquement.
-
-```bash
-curl -X POST http://localhost:8080/articles/6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b/comments \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content": "Excellent article, très instructif !",
-    "author": "Jean Dupont"
-  }'
-```
-
-**Réponse (`201 Created`) :**
-```json
-{
-  "id": "787c88c9-0268-45a7-96a9-83569cffca87",
-  "timestamp": 1789551582429,
-  "content": "Excellent article, très instructif !",
-  "articleId": "6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b",
-  "author": "Jean Dupont"
-}
-```
-
-#### `GET /articles/:articleId/comments/:commentId`
-Récupère un commentaire spécifique pour un article donné.
-
-```bash
-curl -X GET http://localhost:8080/articles/6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b/comments/9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
-```
+- Consultez [`SPECS.md`](./SPECS.md) pour les spécifications techniques et fonctionnelles formelles.
+- Consultez [`AGENTS.md`](./AGENTS.md) pour les directives destinées aux modèles de langage et agents autonomes.
 
 ---
 
-## 💡 Partie 4 : Synthèse et Découverte de GraphQL
+## 🏷️ Conventions Git
 
-En complément de l'architecture REST implémentée ci-dessus, cette section résume les principes et avantages fondamentaux de **GraphQL** par rapport à une API REST conventionnelle, en référence à l'article [Main advantages of GraphQL as an alternative to REST](https://www.adaltas.com/en/2018/11/27/graphql-advantages-over-rest/).
-
-### 1. Résolution de l'Over-fetching et Under-fetching
-- **Dans REST :** Un endpoint retourne un schéma d'objet figé. Si le front-end n'a besoin que du titre de l'article, il reçoit obligatoirement tout le contenu, l'auteur, la date, etc. (*Over-fetching*). Inversement, pour afficher un article et ses commentaires, le client doit effectuer plusieurs allers-retours HTTP : `GET /articles/:id` puis `GET /articles/:id/comments` (*Under-fetching* / problème *N+1*).
-- **Dans GraphQL :** Le client déclare dans sa requête exactement les champs souhaités et peut imbriquer les relations :
-  ```graphql
-  query {
-    article(id: "6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b") {
-      title
-      comments {
-        author
-        content
-      }
-    }
-  }
-  ```
-  Le serveur renvoie un JSON correspondant strictement à cette structure en une seule requête HTTP.
-
-### 2. Point d'entrée unique (`/graphql`) vs Multiples endpoints REST
-- En REST, chaque ressource ou relation nécessite un endpoint spécifique (`/articles`, `/articles/:id`, `/articles/:id/comments`, etc.).
-- En GraphQL, toutes les requêtes (requêtes de lecture `queries` ou d'écriture `mutations`) sont adressées à un unique endpoint en `POST /graphql`.
-
-### 3. Schéma fort et documentation dynamique
-- GraphQL impose un schéma fortement typé (types d'objets, scalaires, mutations).
-- Ce contrat d'interface permet une auto-documentation native, l'introspection du schéma et des outils de développement avancés (comme GraphiQL ou Apollo Explorer) facilitant l'intégration entre équipes front-end et back-end.
-
----
-
-## 📌 Bonnes Pratiques & Git
-
-Le projet applique rigoureusement la convention [Conventional Commits](https://www.conventionalcommits.org) :
-- `chore:` maintenance de configuration et dépendances
-- `feat:` nouvelles fonctionnalités et routeurs Express
-- `test:` couverture par tests automatisés
-- `docs:` documentation technique et rapport d'apprentissage
+Le projet applique la convention **Conventional Commits** :
+- `feat:` nouvelles fonctionnalités et routeurs
+- `test:` ajouts de tests unitaires
+- `docs:` documentation technique
+- `chore:` maintenance des fichiers de build et configuration
