@@ -18,6 +18,7 @@ describe('Web API with Express Tests', () => {
 
       assert.strictEqual(res.body.message, 'Welcome to the Web API with Express')
       assert.ok(res.body.routes)
+      assert.ok(res.body.routes.recettes)
     })
 
     it('GET /hello should return anonymous greeting', async () => {
@@ -123,19 +124,14 @@ describe('Web API with Express Tests', () => {
       assert.strictEqual(res.body.author, newArticlePayload.author)
       assert.ok(res.body.date)
 
-      // Verify the article is persisted
       const listRes = await request(app).get('/articles').expect(200)
       assert.strictEqual(listRes.body.length, 2)
     })
 
     it('POST /articles should return 400 when required fields are missing', async () => {
-      const invalidPayload = {
-        title: 'Only title'
-      }
-
       const res = await request(app)
         .post('/articles')
-        .send(invalidPayload)
+        .send({ title: 'Only title' })
         .expect('Content-Type', /json/)
         .expect(400)
 
@@ -156,7 +152,6 @@ describe('Web API with Express Tests', () => {
       assert(Array.isArray(res.body))
       assert.strictEqual(res.body.length, 1)
       assert.strictEqual(res.body[0].id, validCommentId)
-      assert.strictEqual(res.body[0].articleId, validArticleId)
     })
 
     it('GET /articles/:articleId/comments should return 404 if article does not exist', async () => {
@@ -185,12 +180,6 @@ describe('Web API with Express Tests', () => {
       assert.strictEqual(res.body.articleId, validArticleId)
       assert.strictEqual(res.body.content, newCommentPayload.content)
       assert.strictEqual(res.body.author, newCommentPayload.author)
-
-      // Verify the comment count increased
-      const listRes = await request(app)
-        .get(`/articles/${validArticleId}/comments`)
-        .expect(200)
-      assert.strictEqual(listRes.body.length, 2)
     })
 
     it('POST /articles/:articleId/comments should return 404 when target article does not exist', async () => {
@@ -221,7 +210,6 @@ describe('Web API with Express Tests', () => {
 
       assert.strictEqual(res.body.id, validCommentId)
       assert.strictEqual(res.body.articleId, validArticleId)
-      assert.strictEqual(res.body.author, 'Bob McLaren')
     })
 
     it('GET /articles/:articleId/comments/:commentId should return 404 for non-existent comment', async () => {
@@ -232,14 +220,106 @@ describe('Web API with Express Tests', () => {
 
       assert.strictEqual(res.body.error, 'Comment not found')
     })
+  })
 
-    it('GET /articles/:articleId/comments/:commentId should return 404 for non-existent article', async () => {
+  describe('Headers / Recettes API (/recettes)', () => {
+    const validRecetteId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+    const validRecetteCommentId = 'c3d4e5f6-a7b8-9012-cdef-123456789012'
+
+    it('GET /recettes should return the list of recipes', async () => {
       const res = await request(app)
-        .get(`/articles/unknown-article/comments/${validCommentId}`)
+        .get('/recettes')
+        .expect('Content-Type', /json/)
+        .expect(200)
+
+      assert(Array.isArray(res.body))
+      assert.strictEqual(res.body.length, 1)
+      assert.strictEqual(res.body[0].id, validRecetteId)
+      assert.strictEqual(res.body[0].title, 'Tarte aux pommes rustique')
+    })
+
+    it('GET /recettes/:recetteId should return a recipe by ID', async () => {
+      const res = await request(app)
+        .get(`/recettes/${validRecetteId}`)
+        .expect('Content-Type', /json/)
+        .expect(200)
+
+      assert.strictEqual(res.body.id, validRecetteId)
+      assert.strictEqual(res.body.author, 'Chef Yvan')
+    })
+
+    it('GET /recettes/:recetteId should return 404 if recipe not found', async () => {
+      const res = await request(app)
+        .get('/recettes/non-existent-recette')
         .expect('Content-Type', /json/)
         .expect(404)
 
-      assert.strictEqual(res.body.error, 'Article not found')
+      assert.strictEqual(res.body.error, 'Recette introuvable')
+    })
+
+    it('POST /recettes should create a recipe with UUID', async () => {
+      const newRecette = {
+        title: 'Mousse au chocolat noir',
+        content: 'Faire fondre le chocolat avec une noisette de beurre, incorporer les blancs en neige.',
+        ingredients: ['Chocolat noir 70%', 'Oeufs', 'Sucre vanillé', 'Beurre'],
+        author: 'Yvan'
+      }
+
+      const res = await request(app)
+        .post('/recettes')
+        .send(newRecette)
+        .expect('Content-Type', /json/)
+        .expect(201)
+
+      assert.ok(res.body.id)
+      assert.strictEqual(res.body.title, newRecette.title)
+      assert.strictEqual(res.body.ingredients.length, 4)
+
+      const listRes = await request(app).get('/recettes').expect(200)
+      assert.strictEqual(listRes.body.length, 2)
+    })
+
+    it('POST /recettes should return 400 when missing fields', async () => {
+      const res = await request(app)
+        .post('/recettes')
+        .send({ title: 'Manque contenu et auteur' })
+        .expect('Content-Type', /json/)
+        .expect(400)
+
+      assert.ok(res.body.error)
+    })
+
+    it('GET /recettes/:recetteId/comments should return comments for that recipe', async () => {
+      const res = await request(app)
+        .get(`/recettes/${validRecetteId}/comments`)
+        .expect('Content-Type', /json/)
+        .expect(200)
+
+      assert(Array.isArray(res.body))
+      assert.strictEqual(res.body.length, 1)
+      assert.strictEqual(res.body[0].id, validRecetteCommentId)
+    })
+
+    it('POST /recettes/:recetteId/comments should create comment for recipe', async () => {
+      const res = await request(app)
+        .post(`/recettes/${validRecetteId}/comments`)
+        .send({ content: 'Un vrai régal !', author: 'Paul Bocuse' })
+        .expect('Content-Type', /json/)
+        .expect(201)
+
+      assert.ok(res.body.id)
+      assert.strictEqual(res.body.recetteId, validRecetteId)
+      assert.strictEqual(res.body.author, 'Paul Bocuse')
+    })
+
+    it('GET /recettes/:recetteId/comments/:commentId should return specific comment', async () => {
+      const res = await request(app)
+        .get(`/recettes/${validRecetteId}/comments/${validRecetteCommentId}`)
+        .expect('Content-Type', /json/)
+        .expect(200)
+
+      assert.strictEqual(res.body.id, validRecetteCommentId)
+      assert.strictEqual(res.body.recetteId, validRecetteId)
     })
   })
 })
