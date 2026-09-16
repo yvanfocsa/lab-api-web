@@ -1,6 +1,7 @@
 const express = require('express')
 const articlesRouter = require('./routes/articles')
 const generalRouter = require('./routes/general')
+const recettesRouter = require('../headers/recettes')
 
 const app = express()
 
@@ -13,6 +14,9 @@ app.use('/', generalRouter)
 // Articles and comments API routes
 app.use('/articles', articlesRouter)
 
+// Recettes API routes (from headers/recettes.js)
+app.use('/recettes', recettesRouter)
+
 // Root route providing API overview
 app.get('/', (req, res) => {
   res.json({
@@ -21,7 +25,9 @@ app.get('/', (req, res) => {
       hello: '/hello',
       about: '/about',
       articles: '/articles',
-      comments: '/articles/:articleId/comments'
+      comments: '/articles/:articleId/comments',
+      recettes: '/recettes',
+      recettesComments: '/recettes/:recetteId/comments'
     }
   })
 })
