@@ -1,0 +1,29 @@
+{
+  "name": "lab-web-api-express",
+  "version": "1.0.0",
+  "description": "Lab: Web API with Node.js and Express",
+  "main": "src/server.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "mocha --exit test/**/*.test.js"
+  },
+  "keywords": [
+    "nodejs",
+    "express",
+    "api",
+    "rest"
+  ],
+  "author": "Yvan Focsa",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "uuid": "^14.0.2"
+  },
+  "devDependencies": {
+    "mocha": "^12.0.1",
+    "supertest": "^7.2.2"
+  }
+}
