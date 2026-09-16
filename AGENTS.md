@@ -1,82 +1,58 @@
-# AGENTS.md - Guide pour Agents IA et Assistants de Développement
+# Guide de développement et directives pour agents
 
-Ce document fournit aux agents d'intelligence artificielle (et aux développeurs) le contexte architectural, les conventions de code et les instructions opérationnelles pour naviguer et contribuer efficacement à ce dépôt.
+Ce document rassemble les conventions techniques, l'organisation du code et les consignes opérationnelles destinées aux développeurs et aux assistants automatisés intervenant sur ce dépôt.
 
----
+## Contexte du projet
 
-## 🤖 1. Présentation du Dépôt
+Le projet `lab-web-api-express` a été conçu dans le cadre du module Technologies Web Avancées dispensé à l'ECE Paris. Il s'agit d'une API REST écrite en Node.js avec Express, articulée autour de collections en mémoire pour les articles, les recettes culinaires et leurs commentaires. Une suite de tests automatisés sous Mocha et SuperTest en valide le comportement.
 
-- **Nom du projet :** `lab-web-api-express`
-- **Cadre académique :** Technologies Web Avancées - ECE Paris
-- **Technologie principale :** Node.js avec le framework Express.js (v4.x)
-- **Objectif :** Implémentation d'une API REST modulaire avec gestion en mémoire d'articles, recettes et commentaires, couverte par des tests automatisés (Mocha + SuperTest).
+## Organisation des fichiers
 
----
+- `index.js` : Point d'entrée principal du serveur HTTP, avec gestion de repli en cas de port indisponible.
+- `src/app.js` : Instanciation d'Express, déclaration des middlewares globaux et montage des routeurs.
+- `src/db.js` : Base de données locale en mémoire avec méthode `db.reset()` pour les tests.
+- `headers/recettes.js` : Routeur dédié aux recettes et à leurs commentaires.
+- `headers/articles.js`, `headers/comments.js`, `headers/general.js` : Routeurs modulaires du service.
+- `handlers/` : Alias miroir pointant vers les mêmes routeurs pour maintenir la compatibilité.
+- `test/api.test.js` : Ensemble des 27 tests automatisés exécutés via Mocha et SuperTest.
+- `content/about.json` : Fichier statique utilisé par la route `/about`.
+- `SPECS.md` : Cahier des charges et spécifications techniques détaillées.
+- `README.md` : Documentation générale du projet et exemples d'appels.
 
-## 🏗️ 2. Structure et Organisation du Code
+## Commandes courantes
 
-- **`index.js`** : Point d'entrée principal du serveur (écoute HTTP avec repli de port automatique).
-- **`src/app.js`** : Instanciation d'Express, middlewares (`express.json()`), et montage des routeurs.
-- **`src/db.js`** : Base de données in-memory simulant une persistance. Expose un helper `db.reset()` crucial pour les tests.
-- **`headers/` (ou `handlers/`)** :
-  - `recettes.js` : Routeur Express pour l'API `/recettes` et `/recettes/:recetteId/comments`.
-  - `articles.js`, `comments.js`, `general.js` : Routeurs modulaires.
-- **`src/routes/`** : Implémentations d'origine des routeurs Express.
-- **`test/api.test.js`** : Suite de tests automatisés (27 tests) exécutée avec Mocha et SuperTest.
-- **`content/about.json`** : Fichier JSON statique utilisé pour la route `/about`.
-- **`SPECS.md`** : Spécifications techniques détaillées.
-- **`README.md`** : Documentation utilisateur et documentation de l'API.
-
----
-
-## ⚡ 3. Commandes d'Exploitation
-
-### Installation
+### Installation des paquets
 ```bash
 npm install
 ```
 
-### Lancement du serveur
+### Lancement de l'application
 ```bash
 npm start
 ```
-*Note : Le port par défaut est `8080`. Si `8080` est déjà réservé par un autre processus, le serveur bascule automatiquement sur le port `3000`.*
+Le serveur tente d'abord d'écouter sur le port `8080`, ou sur la variable d'environnement `PORT`. Si le port est déjà occupé, il bascule sur le port `3000`.
 
 ### Exécution des tests
 ```bash
 npm test
 ```
-*Important : Tous les tests doivent passer avec succès (`0 failure`) avant de considérer une modification comme validée.*
+Toutes les modifications doivent valider l'intégralité des 27 tests avec zéro échec.
 
----
+## Règles de développement
 
-## 📋 4. Règles de Développement et Bonnes Pratiques
+1. **Isolation des scénarios de test :** Toujours exécuter `db.reset()` dans le hook `beforeEach` des suites de tests pour repartir d'un état propre et éviter les dépendances entre scénarios.
+2. **Génération des clés et horodatages :** Utiliser exclusivement `uuid.v4()` pour la création des identifiants et `Date.now()` pour les timestamps des commentaires.
+3. **Codes de statut HTTP :**
+   - `200 OK` : Réponse positive à une lecture ou consultation.
+   - `201 Created` : Création confirmée d'une ressource.
+   - `400 Bad Request` : Corps de requête incomplet ou mal formé.
+   - `404 Not Found` : Ressource ou entité parente inexistante.
+   - `500 Internal Server Error` : Anomalie interne inattendue.
+4. **Format des messages de commit :** Utiliser le standard Conventional Commits avec les préfixes appropriés (`feat:`, `fix:`, `test:`, `docs:`, `chore:`).
 
-1. **Isolation des tests :**
-   Toujours invoquer `db.reset()` dans le hook `beforeEach` des suites de tests pour éviter les effets de bord entre scénarios.
-2. **Gestion des IDs et dates :**
-   - Toujours générer les identifiants via `uuid.v4()`.
-   - Utiliser `Date.now()` pour les timestamps de commentaires.
-3. **Codes de statut HTTP à respecter scrupuleusement :**
-   - `200 OK` : Lecture réussie.
-   - `201 Created` : Création de ressource réussie (`POST`).
-   - `400 Bad Request` : Corps de requête incomplet ou invalide.
-   - `404 Not Found` : Ressource ou parent inexistant.
-   - `500 Internal Server Error` : Erreur interne inattendue.
-4. **Conventions Git :**
-   Rédiger tous les messages de commit selon la spécification [Conventional Commits](https://www.conventionalcommits.org) :
-   - `feat: ...`
-   - `fix: ...`
-   - `test: ...`
-   - `docs: ...`
-   - `chore: ...`
-   - `refactor: ...`
+## Checklist de validation
 
----
-
-## 🔍 5. Vérification Rapide (Checklist Agent)
-
-Avant de valider une modification :
-- [ ] Exécuter `npm test` et s'assurer que les 27 tests passent.
-- [ ] Vérifier la propreté du git tree avec `git status`.
-- [ ] Mettre à jour `README.md` ou `SPECS.md` si de nouveaux endpoints sont ajoutés.
+Avant de finaliser une contribution :
+- [ ] Exécuter `npm test` et s'assurer que les 27 tests passent avec succès.
+- [ ] Contrôler la propreté de l'arbre Git avec `git status`.
+- [ ] Répercuter les éventuels ajouts de routes dans `README.md` et `SPECS.md`.
